@@ -1,0 +1,1295 @@
+{
+  "name": "Restaurant Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message.text }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=###ROLE\n** You are my restaurant customer support manager. Your role is\nto route user message to one of your employees.\n\n###EMPLOYEES\n** Questions Expert: If the user has any questions about our\nmenu or the restaurant\n** Orders Expert: If the user wants to make or cancel an order.\nIf the user provides his information. If the user has any\nquestion about his order. If the user has chosen a specific\norder or items. If the user provides the order ID.\n** Generalist: If the user sent a general message (e.g. Hi,\nGood morning) I\n\n###OUTPUT EXAMPLE\n{\n\"employee\": \"Questions Expert\"\n}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        208,
+        -48
+      ],
+      "id": "00f133b0-2892-422d-88df-4fa24486b24c",
+      "name": "Basic LLM Chain",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output.employee }}",
+                    "rightValue": "Questions Expert",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "3af8cda5-ec98-4a96-96f9-8db0bb3c46a4"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Question "
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "1f2caf37-ab75-45cc-b680-f27ae1a636bc",
+                    "leftValue": "={{ $json.output.employee }}",
+                    "rightValue": "Orders Expert",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Orders"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "4a322ef9-bdb2-4b74-8cd0-21ee6d99de75",
+                    "leftValue": "={{ $json.output.employee }}",
+                    "rightValue": "Generalist",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "General Expert"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        560,
+        -64
+      ],
+      "id": "91862f2f-616e-484d-95ed-1d7983680fec",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7ea7fc49-ac95-434e-9ccc-67d8dc686ea1",
+              "name": "System Prompt ",
+              "value": "=### ROLE\n** You are responsible for orders management in our restaurant.\nMaking an order, Cancelling an order, replying to inqueries\nabout an order in the same language the users use if the user asked in English reply in English if asked in Arabic reply in arabic and Use an Egyptian Dialect.\n\n### TOOLS\n** orders_sheet_read_tool: you use it to reply to users asking after getting the order Id from the user\nabout their orders\n** code_tool: use it to generate a unique ID of 6 numbers\nbefore using orders_sheet_write_tool and add this ID to the ID column in the Sheet\n** orders_sheet_write_tool: you use it to add an order to the sheet\n** staff_updating_tool : after confirming the order from the user.\n** order_sheet_cancel_tool: you use it to cancel an order\n** restaurant_knowledge_base: Find here our information related\nto the restaurant and menu\n** Menu ** : You Can use this tool to help the user pick what he want from the menu and provide the price for each item to him in USD Currency or Egyptian pound (جنيه) if the user used the Arabic Lanhuage \n\n### INSTRUCTIONS\n** Ask the user about all needed data, Name, Phone Number,\nAddress, Order. MAKE SURE to collect all needed data\n** Confirm order data before using adding it to the sheet or\ncancelling it and in the final confirmation message you tell the user about the Total price of what he ordered in USD Currency or Egyptian pound (جنيه) if the user used the Arabic Lanhuage and always add 10% of the total price as a delivery Fee in English and Arabic Both And add this two choices\n✅ Confirm Order\n❌ Cancel Order \n.\n** If a user wants to cancel an order, make sure to ask the\nuser about the order ID first.\n** If you can't find an order for a certain ID, tell them that\ntheir order wasn't taken successfully, please tell me your\norder again\n** generate only one unique ID and save it to the sheet in the OrderID column and Always send the same generated order ID in your message , After saving an order",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        784,
+        -48
+      ],
+      "id": "ac8ad0fb-8fb0-475e-9dcb-0636476055ec",
+      "name": "Orders System Prompt"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('BOT Trigger').item.json.message.text }}",
+        "options": {
+          "systemMessage": "={{ $json['System Prompt '] }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        1512,
+        -48
+      ],
+      "id": "6135a188-82a8-418b-b2c3-917cdc4d6837",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n\t\"type\": \"object\",\n\"properties\": {\n\"employee\": {\n\"type\": \"string\",\n\"description\": \"The employee chosen by AI\"\n}\n}\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        344,
+        176
+      ],
+      "id": "e299e918-5e55-429f-9789-7fbb8fab411f",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "688f8ece-7078-41fb-a78d-264e232c2ee8",
+              "name": "System Prompt ",
+              "value": "=### ROLE You are my restaurant expert in replying to users' questions in the same language the users use if the user asked in English reply in English if asked in Arabic reply in arabic and Use an Egyptian Dialect. Use your connected knowledge base to reply to any inquery. \n\n### TOOLS ** restaurant_knowledge_base: Find here our information related to the restaurant and menu\n\n** code_tool ** use it to generate a unique ID of 5 numbers\nbefore using orders_sheet_write_tool and add this ID to the ID column in the Sheet\n\n** Menu ** : You Can use this tool to help the user pick what he want from the menu and provide the price for each item to him\n\n** staff_updating_tool : after confirming the order from the user use this tool to send all the order details and the customer info to the staff in a simple message format.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        784,
+        144
+      ],
+      "id": "20626cd3-df83-45f5-b5b4-70752731d0e2",
+      "name": "General System Prompt1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2dd77a56-b9a1-4752-ac1e-ccbfebaf10e2",
+              "name": "System Prompt ",
+              "value": "=You Are My Restaurant Customer Support Expert that replies in the same language the users use if the user asked in English reply in English if asked in Arabic reply in arabic and Use an Egyptian Dialect\n** Menu ** : You Can use this tool to help the user pick what he want from the menu and provide the price for each item to him\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        784,
+        -240
+      ],
+      "id": "5126009a-d632-4f55-babd-c48a3ccc5202",
+      "name": "Question System Prompt"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('BOT Trigger').item.json.message.chat.id }}",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1312,
+        224
+      ],
+      "id": "d86cedf5-f164-497a-b915-7a00c08f908b",
+      "name": "Memory"
+    },
+    {
+      "parameters": {
+        "model": "tngtech/deepseek-r1t2-chimera:free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        216,
+        176
+      ],
+      "id": "2257b855-0c9f-4a61-9167-27995410d74e",
+      "name": "Ai Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "VCuFfebC74feRex4",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "deepseek/deepseek-r1-0528:free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        1184,
+        224
+      ],
+      "id": "ed44cede-5de1-4864-bd06-5bcd9b4065e6",
+      "name": "Ai Model 2",
+      "credentials": {
+        "openRouterApi": {
+          "id": "VCuFfebC74feRex4",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1W6R8HVUH0IfoWL76NRSfgod-H9bQ76rIeyKrepmlYxM",
+          "mode": "list",
+          "cachedResultName": "Restaurant SpreadSheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1W6R8HVUH0IfoWL76NRSfgod-H9bQ76rIeyKrepmlYxM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1W6R8HVUH0IfoWL76NRSfgod-H9bQ76rIeyKrepmlYxM/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Order ID",
+              "lookupValue": "={{  $fromAI(\"order_id\") }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        1440,
+        224
+      ],
+      "id": "06782331-ca3a-4ab9-81f2-3e1e5f0fc63b",
+      "name": "orders_sheet_read_tool",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Yv8zg8GXYW02v7x2",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1W6R8HVUH0IfoWL76NRSfgod-H9bQ76rIeyKrepmlYxM",
+          "mode": "list",
+          "cachedResultName": "Restaurant SpreadSheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1W6R8HVUH0IfoWL76NRSfgod-H9bQ76rIeyKrepmlYxM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1W6R8HVUH0IfoWL76NRSfgod-H9bQ76rIeyKrepmlYxM/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Time": "={{ $now }}",
+            "Order": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Order', ``, 'string') }}",
+            "Price": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Price', ``, 'string') }}",
+            "Order ID": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Order_ID', ``, 'string') }}",
+            "Customer Name ": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Customer_Name_', ``, 'string') }}",
+            "Phone Number ": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Phone_Number_', ``, 'string') }}",
+            "Address": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Address', ``, 'string') }}",
+            "Status": "In Kitchen"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Time",
+              "displayName": "Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Order",
+              "displayName": "Order",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Price",
+              "displayName": "Price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Order ID",
+              "displayName": "Order ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer Name ",
+              "displayName": "Customer Name ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone Number ",
+              "displayName": "Phone Number ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Address",
+              "displayName": "Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        1568,
+        224
+      ],
+      "id": "7197b27e-0937-4770-bf36-b6fe14d0eb06",
+      "name": "orders_sheet_write_tool",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Yv8zg8GXYW02v7x2",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1W6R8HVUH0IfoWL76NRSfgod-H9bQ76rIeyKrepmlYxM",
+          "mode": "list",
+          "cachedResultName": "Restaurant SpreadSheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1W6R8HVUH0IfoWL76NRSfgod-H9bQ76rIeyKrepmlYxM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1W6R8HVUH0IfoWL76NRSfgod-H9bQ76rIeyKrepmlYxM/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Order ID": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Order_ID__using_to_match_', ``, 'string') }}",
+            "Status": "Cancelled",
+            "Time": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Time', ``, 'string') }}",
+            "Order": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Order', ``, 'string') }}",
+            "Price": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Price', ``, 'string') }}",
+            "Customer Name ": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Customer_Name_', ``, 'string') }}",
+            "Phone Number ": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Phone_Number_', ``, 'string') }}",
+            "Address": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Address', ``, 'string') }}"
+          },
+          "matchingColumns": [
+            "Order ID"
+          ],
+          "schema": [
+            {
+              "id": "Time",
+              "displayName": "Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Order",
+              "displayName": "Order",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Price",
+              "displayName": "Price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Order ID",
+              "displayName": "Order ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Customer Name ",
+              "displayName": "Customer Name ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone Number ",
+              "displayName": "Phone Number ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Address",
+              "displayName": "Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        1696,
+        224
+      ],
+      "id": "40d31a1a-43b0-4e45-98fc-574ffb6ed638",
+      "name": "orders_sheet_cancel_tool",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Yv8zg8GXYW02v7x2",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const orderId = Math.floor(100000 + Math.random() * 900000).toString();\nreturn orderId;\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.3,
+      "position": [
+        1824,
+        224
+      ],
+      "id": "51a96592-f5ca-49a6-bb7c-834fa18a826f",
+      "name": "Code Tool"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1W6R8HVUH0IfoWL76NRSfgod-H9bQ76rIeyKrepmlYxM",
+          "mode": "list",
+          "cachedResultName": "Restaurant SpreadSheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1W6R8HVUH0IfoWL76NRSfgod-H9bQ76rIeyKrepmlYxM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1632559576,
+          "mode": "list",
+          "cachedResultName": "Menu",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1W6R8HVUH0IfoWL76NRSfgod-H9bQ76rIeyKrepmlYxM/edit#gid=1632559576"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        1424,
+        -288
+      ],
+      "id": "8a1a6dd1-39be-4b84-afad-5879ce69f1dd",
+      "name": "Menu",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Yv8zg8GXYW02v7x2",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1W6R8HVUH0IfoWL76NRSfgod-H9bQ76rIeyKrepmlYxM",
+          "mode": "list",
+          "cachedResultName": "Restaurant SpreadSheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1W6R8HVUH0IfoWL76NRSfgod-H9bQ76rIeyKrepmlYxM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 897037706,
+          "mode": "list",
+          "cachedResultName": "Openeing_Times",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1W6R8HVUH0IfoWL76NRSfgod-H9bQ76rIeyKrepmlYxM/edit#gid=897037706"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        1552,
+        -288
+      ],
+      "id": "95bcbe23-8314-47ba-bd19-b30e26679e6a",
+      "name": "Opening Times",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Yv8zg8GXYW02v7x2",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1W6R8HVUH0IfoWL76NRSfgod-H9bQ76rIeyKrepmlYxM",
+          "mode": "list",
+          "cachedResultName": "Restaurant SpreadSheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1W6R8HVUH0IfoWL76NRSfgod-H9bQ76rIeyKrepmlYxM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1394410691,
+          "mode": "list",
+          "cachedResultName": "Branches",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1W6R8HVUH0IfoWL76NRSfgod-H9bQ76rIeyKrepmlYxM/edit#gid=1394410691"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        1680,
+        -288
+      ],
+      "id": "f0f6b8e3-d2ca-461d-869c-53b70118e8b4",
+      "name": "Branches",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Yv8zg8GXYW02v7x2",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('BOT Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1936,
+        -48
+      ],
+      "id": "9e0fffad-f073-4991-95c3-d53cb06e098d",
+      "name": "Bot Reply",
+      "webhookId": "5055d7ab-4cf6-4506-bcb8-f901cb801f76",
+      "retryOnFail": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "TFD1kOzmv5yT9GLx",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -16,
+        -48
+      ],
+      "id": "9c996f2d-d5f0-4b0b-9528-0b631b9b503d",
+      "name": "BOT Trigger",
+      "webhookId": "b53b67cd-3173-4efb-a17e-0c37d8a6ced3",
+      "credentials": {
+        "telegramApi": {
+          "id": "TFD1kOzmv5yT9GLx",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        608,
+        528
+      ],
+      "id": "de2e7bf3-5866-405a-9aea-b7d32353c75a",
+      "name": "Staff Trigger",
+      "webhookId": "b53b67cd-3173-4efb-a17e-0c37d8a6ced3",
+      "credentials": {
+        "telegramApi": {
+          "id": "AkkQIOqhLBR5Av72",
+          "name": "Staff Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "7844461476",
+        "text": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Text', ``, 'string') }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegramTool",
+      "typeVersion": 1.2,
+      "position": [
+        1968,
+        224
+      ],
+      "id": "5f60dde5-a02b-4073-9e6c-c45c7217f443",
+      "name": "staff_updating_tool",
+      "webhookId": "c1040a43-07d8-4532-8760-76303e828f16",
+      "credentials": {
+        "telegramApi": {
+          "id": "AkkQIOqhLBR5Av72",
+          "name": "Staff Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message.text }}",
+        "options": {
+          "systemMessage": "=You are an AI agent responsible only for updating order statuses in a Google Sheet.\n\nYou will receive short text messages such as:\n\n\"order 123 is being served now\"\n\n\"order 123 is delivered\"\n\n\"order 123 is ready\"\n\nYour tasks:\n\nExtract the Order ID from the message.\n\nDetermine the correct order status from the message content.\n\nUse the order_sheet_update tool to update the row where OrderID matches the extracted ID.\n\nUpdate only the Order Status column.\n\nRules:\n\nDo not invent or guess Order IDs.\n\nDo not update multiple orders.\n\nDo not respond with explanations or text.\n\nIf the message does not clearly contain an Order ID or status, do nothing.\n\nAllowed statuses:\n\nBeing Served\n\nDelivered\n\nCancelled\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        832,
+        528
+      ],
+      "id": "9b009b93-ded0-4839-a81e-bec342850ace",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1W6R8HVUH0IfoWL76NRSfgod-H9bQ76rIeyKrepmlYxM",
+          "mode": "list",
+          "cachedResultName": "Restaurant SpreadSheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1W6R8HVUH0IfoWL76NRSfgod-H9bQ76rIeyKrepmlYxM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Orders",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1W6R8HVUH0IfoWL76NRSfgod-H9bQ76rIeyKrepmlYxM/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Order ID": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Order_ID__using_to_match_', ``, 'string') }}",
+            "Status": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Status', ``, 'string') }}"
+          },
+          "matchingColumns": [
+            "Order ID"
+          ],
+          "schema": [
+            {
+              "id": "Time",
+              "displayName": "Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Order",
+              "displayName": "Order",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Price",
+              "displayName": "Price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Order ID",
+              "displayName": "Order ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Customer Name ",
+              "displayName": "Customer Name ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone Number ",
+              "displayName": "Phone Number ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Address",
+              "displayName": "Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        960,
+        752
+      ],
+      "id": "c0b6701c-75af-4bc6-829e-785e98cf814c",
+      "name": "order_sheet_update",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Yv8zg8GXYW02v7x2",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "tngtech/deepseek-r1t2-chimera:free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        832,
+        752
+      ],
+      "id": "c762c4e7-6dfe-4420-872c-091f92b1c6b6",
+      "name": "Ai Model 3",
+      "credentials": {
+        "openRouterApi": {
+          "id": "VCuFfebC74feRex4",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Input Routing",
+        "height": 752,
+        "width": 592
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -304
+      ],
+      "id": "48e71369-9dc2-4c20-bdf7-bd1ac8004816",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Defining the Prompt",
+        "height": 752,
+        "width": 592,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        544,
+        -304
+      ],
+      "id": "39805df7-b4c4-465c-96e3-0416b80e921c",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Main Agent",
+        "height": 768,
+        "width": 944,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1168,
+        -320
+      ],
+      "id": "f46fd08d-aa95-4ec8-9a7d-c79387bff03d",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "Staff Agent",
+        "height": 448,
+        "width": 592,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        544,
+        480
+      ],
+      "id": "5ea010f5-d504-4439-82ac-5c9dd801df1b",
+      "name": "Sticky Note3"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Question System Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Orders System Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "General System Prompt1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Orders System Prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "General System Prompt1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Question System Prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ai Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ai Model 2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "orders_sheet_read_tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "orders_sheet_write_tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "orders_sheet_cancel_tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Bot Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Menu": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Opening Times": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Branches": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BOT Trigger": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Staff Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "staff_updating_tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "order_sheet_update": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        []
+      ]
+    },
+    "Ai Model 3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "timezone": "Africa/Cairo",
+    "errorWorkflow": "xulnvr34msBA39JF"
+  },
+  "versionId": "16d849e2-8d91-4cbd-b233-a4f2d004dd08",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1d3f54eb5ef87e1f16b475997e9ec2a01f118a34f16cc1fe60e80ded9c6e3b66"
+  },
+  "id": "xulnvr34msBA39JF",
+  "tags": []
+}
